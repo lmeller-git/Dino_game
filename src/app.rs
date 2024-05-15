@@ -37,7 +37,8 @@ use rand::prelude::*;
 
 #[derive(Debug, Default)]
 pub struct App {
-    score: u64,
+    pub score: u64,
+    pub highscore: u64,
     exit: bool,
     y: f64,
     in_air: bool,
@@ -74,9 +75,19 @@ impl Widget for &App {
             self.score.to_string().into(),
         ])]);
 
+        let best_counter_text = Text::from(vec![Line::from(vec![
+            "Highscore ".into(),
+            self.highscore.to_string().into(),
+        ])]);
+
         Paragraph::new(counter_text)
         .block(block.clone())
         .right_aligned()
+        .render(area, buf);
+
+        Paragraph::new(best_counter_text)
+        .block(block.clone())
+        .left_aligned()
         .render(area, buf);
 
         let player = Canvas::default()
@@ -123,7 +134,8 @@ impl App {
     pub fn run(&mut self, terminal: &mut tui::Tui) -> Result<()> {
         loop {
             terminal.draw(|frame| self.render_frame(frame))?;
-            if event::poll(Duration::from_millis(5))? {
+            let time = self.increase_spead();
+            if event::poll(Duration::from_micros(time))? {
                 self.handle_events().wrap_err("handle events failed")?;
             }
             self.update_position()?;
@@ -135,12 +147,28 @@ impl App {
                 break;
             }
             self.score += 1;
+            self.highscore();
         }
         Ok(())
     }
 
     fn render_frame(&self, frame: &mut Frame) {
         frame.render_widget(self, frame.size());
+    }
+
+    fn highscore(&mut self) {
+        if self.score > self.highscore {
+            self.highscore = self.score;
+        }
+    }
+
+    fn increase_spead(&self) -> u64 {
+        if (self.score / 10000).to_u64().unwrap() >= 5000 {
+            return 1;
+        }
+        else {
+            return 5000 - (self.score / 10000).to_u64().unwrap();
+        }
     }
 
     fn handle_events(&mut self) -> Result<()> {
@@ -227,6 +255,7 @@ impl App {
     pub fn new() -> App {
         App {
             score: 0,
+            highscore: 0,
             exit: false, 
             y: -20.0,
             in_air: false,
