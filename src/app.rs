@@ -1,37 +1,23 @@
 use crate::tui;
-use crate::errors;
 
-use color_eyre::owo_colors::OwoColorize;
-use crossterm::event::poll;
-use crossterm::{
-    event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
-    terminal::{
-        disable_raw_mode, enable_raw_mode, EnterAlternateScreen,
-        LeaveAlternateScreen,
-    },
-    ExecutableCommand,
+use color_eyre::{
+    eyre::WrapErr,
+    Result,
 };
+
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+
 use num::ToPrimitive;
-use rand::seq::index::IndexVecIter;
+
 use ratatui::widgets::canvas::Canvas;
-use ratatui::widgets::canvas::MapResolution;
 use ratatui::{
     prelude::*,
-    symbols::border,
     widgets::{block::*, canvas, *},
     widgets::Paragraph,
     style::Color,
 };
-use std::collections::hash_map::Keys;
-use std::collections::VecDeque;
-use std::hash::RandomState;
-use std::time::Duration;
-use std::{io, sync::Arc};
 
-use color_eyre::{
-    eyre::{bail, WrapErr},
-    Result,
-};
+use std::time::Duration;
 
 use rand::prelude::*;
 
@@ -269,8 +255,6 @@ impl App {
     fn handle_key_event(&mut self, key_event: KeyEvent) -> Result<()> {
         match key_event.code {
             KeyCode::Char('q') => self.exit(),
-            KeyCode::Left => self.decrement()?,
-            KeyCode::Right => self.increment()?,
             KeyCode::Down => self.duck()?,
             KeyCode::Up => self.jump()?,
             _ => {}
@@ -280,16 +264,6 @@ impl App {
 
     fn exit(&mut self) {
         self.exit = true;
-    }
-
-    fn decrement(&mut self) -> Result<()> {
-        self.score -= 1;
-        Ok(())
-    }
-
-    fn increment(&mut self) -> Result<()> {
-        self.score += 1;
-        Ok(())
     }
 
     fn jump(&mut self) -> Result<()> {
@@ -316,6 +290,8 @@ impl App {
 
 }
 
+
+/*
 #[derive(Debug, Default)]
 pub struct Player {
     x: u8,
@@ -376,3 +352,5 @@ impl Widget for &Bird {
         
     }
 }
+
+*/

@@ -1,8 +1,6 @@
 use app::App;
-use color_eyre::{
-    Result
-};
-use num::traits::ToBytes;
+use color_eyre::Result;
+
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
@@ -18,7 +16,7 @@ fn main() -> Result<()> {
     let mut terminal = tui::init()?;
 
     let path = Path::new("Highscore.bin");
-    let mut number = 0;
+    let number: u64;
     if !path.exists() {
         File::create(path)?;
         number = 0;
