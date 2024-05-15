@@ -12,6 +12,7 @@ use crossterm::{
     ExecutableCommand,
 };
 use num::ToPrimitive;
+use rand::seq::index::IndexVecIter;
 use ratatui::widgets::canvas::Canvas;
 use ratatui::widgets::canvas::MapResolution;
 use ratatui::{
@@ -22,6 +23,8 @@ use ratatui::{
     style::Color,
 };
 use std::collections::hash_map::Keys;
+use std::collections::VecDeque;
+use std::hash::RandomState;
 use std::time::Duration;
 use std::{io, sync::Arc};
 
@@ -41,6 +44,7 @@ pub struct App {
     rising: bool,
     ducking: bool,
     height: f64,
+    enemies: Vec<f64>,
 }
 
 impl Widget for &App {
@@ -81,14 +85,35 @@ impl Widget for &App {
             .y_bounds([-45.0, 45.0])
             .paint(|ctx|{
                 ctx.draw(&canvas::Rectangle {
-                    x: (area.width / 128).to_f64().unwrap(),
+                    x: -5.0,
                     y: self.y,
                     width: 10.0,
                     height: self.height,
                     color: Color::White,
                 });
+                ctx.layer();
+                ctx.draw(&canvas::Line {
+                    x1: -90.0,
+                    y1: -20.0,
+                    x2: 90.0,
+                    y2: -20.0,
+                    color: Color::Green,
+                });
+                ctx.layer();
+                if self.enemies.len() > 0 {
+                    for enemy in self.enemies.iter(){
+                        ctx.draw(&canvas::Rectangle {
+                            x: *enemy,
+                            y: -20.0,
+                            width: 2.0,
+                            height: 5.0,
+                            color: Color::Red,
+                        })
+                    }
+                }
             });
         player.render(area, buf); 
+
             
     }   
 }
@@ -102,6 +127,10 @@ impl App {
                 self.handle_events().wrap_err("handle events failed")?;
             }
             self.update_position()?;
+            self.update_enemies()?;
+            if self.collision_check() {
+                break;
+            }
             if self.exit {
                 break;
             }
@@ -123,6 +152,17 @@ impl App {
             }
            _ => Ok(())
         }
+    }
+
+    fn collision_check(&mut self) -> bool {
+        if self.y < -15.0 {
+            for enemy in self.enemies.iter() {
+                if *enemy < 5.0 && *enemy > -5.0 {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     fn update_position(&mut self) -> Result<()> {
@@ -153,6 +193,37 @@ impl App {
         Ok(())
     }
 
+    fn update_enemies(&mut self) -> Result<()> {
+        let mut rng = thread_rng();
+        let mut last_in_range: bool = false;
+        if self.enemies.len() > 0 {
+            let last_one = self.enemies[self.enemies.len() - 1];
+            if last_one < 55.0 || last_one > 84.0 {
+                last_in_range = true;
+            }
+        }
+        else {
+            last_in_range = true;
+        }
+        if rng.gen_range(0.0..1.0) < 0.008 && last_in_range {
+            self.enemies.push(88.0);
+        }
+        let mut count = 0;
+        for  enemy in self.enemies.iter_mut() {
+            if *enemy > - 90.0 {
+                *enemy -= 1.0;
+            }
+            else {
+                count += 1;
+            }
+        }
+        for _ in 0..count {
+            self.enemies.remove(0);
+        }
+
+        Ok(())
+    }
+
     pub fn new() -> App {
         App {
             score: 0,
@@ -161,7 +232,8 @@ impl App {
             in_air: false,
             rising: false,
             ducking: false,
-            height: 10.0
+            height: 10.0,
+            enemies: vec![]
         }
     }
 
