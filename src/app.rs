@@ -31,7 +31,7 @@ pub struct App {
     rising: bool,
     ducking: bool,
     height: f64,
-    enemies: Vec<f64>,
+    enemies: Vec<Vec<f64>>,
 }
 
 impl Widget for &App {
@@ -100,10 +100,10 @@ impl Widget for &App {
                 if self.enemies.len() > 0 {
                     for enemy in self.enemies.iter(){
                         ctx.draw(&canvas::Rectangle {
-                            x: *enemy,
-                            y: -20.0,
+                            x: enemy[0],
+                            y: enemy[2],
                             width: 2.0,
-                            height: 5.0,
+                            height: enemy[1],
                             color: Color::Red,
                         })
                     }
@@ -169,21 +169,22 @@ impl App {
     }
 
     fn collision_check(&mut self) -> bool {
-        if self.y < -15.0 {
-            for enemy in self.enemies.iter() {
-                if *enemy < 5.0 && *enemy > -5.0 {
+        for enemy in self.enemies.iter() {
+            if enemy[0] < 5.0 && enemy[0] > -5.0 {
+                if (self.y >= enemy[2] && self.y <= enemy[2] + enemy[1]) || (self.y + self.height >= enemy[2] && self.y + self.height <= enemy[2] + enemy[1]){
                     return true;
                 }
             }
         }
+
         false
     }
 
     fn update_position(&mut self) -> Result<()> {
         if self.in_air {
             if self.rising {
-                if self.y < 10.0 {
-                    self.y += 1.0;
+                if self.y < 15.0 {
+                    self.y += 1.5;
                 }
                 else {
                     self.rising = false;
@@ -191,7 +192,7 @@ impl App {
             }
             else {
                 if self.y > -20.0 {
-                    self.y -= 1.0;
+                    self.y -= 1.5;
                 }
                 else {
                     self.in_air = false;
@@ -211,7 +212,7 @@ impl App {
         let mut rng = thread_rng();
         let mut last_in_range: bool = false;
         if self.enemies.len() > 0 {
-            let last_one = self.enemies[self.enemies.len() - 1];
+            let last_one = self.enemies[self.enemies.len() - 1][0];
             if last_one < 55.0 || last_one > 84.0 {
                 last_in_range = true;
             }
@@ -220,12 +221,23 @@ impl App {
             last_in_range = true;
         }
         if rng.gen_range(0.0..1.0) < 0.008 && last_in_range {
-            self.enemies.push(88.0);
+            let mut height = rng.gen_range(5.0..8.0);
+            let flying = rng.gen_range(0.0..1.0);
+            let mut y = -20.0;
+            if flying > 0.5 && flying < 0.75 {
+                y = -10.0;
+                height = 1.0;
+            }
+            else if flying > 0.75 {
+                y = 0.0;
+                height = 1.0;
+            }
+            self.enemies.push(vec![88.0, height, y]);
         }
         let mut count = 0;
         for  enemy in self.enemies.iter_mut() {
-            if *enemy > - 90.0 {
-                *enemy -= 1.0;
+            if enemy[0] > - 90.0 {
+                enemy[0] -= 1.0;
             }
             else {
                 count += 1;
@@ -284,6 +296,9 @@ impl App {
         }
         else {
             self.ducking = true;
+        }
+        if self.in_air {
+            self.rising = false;
         }
         Ok(())
     }
