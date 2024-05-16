@@ -1,5 +1,8 @@
 use crate::tui;
 
+
+
+use color_eyre::owo_colors::OwoColorize;
 use color_eyre::{
     eyre::WrapErr,
     Result,
@@ -40,6 +43,8 @@ pub struct App {
     on_puase: bool,
     dead: bool,
     auto: bool,
+    black: bool,
+    color_switch: bool,
 }
 
 impl Widget for &App {
@@ -55,6 +60,7 @@ impl Widget for &App {
                 " Quit ".into(),
                 "<Q> ".bold(),
             ]));
+        
             
             let block = Block::default()
                     .title(title.alignment(Alignment::Center)
@@ -100,9 +106,21 @@ impl Widget for &App {
                 " Quit ".into(),
                 "<Q> ".bold(),
                 " Auto ".into(),
-                " Tab ".bold(),
+                "<Tab> ".bold(),
             ]));
+            
+            let color: Color;
+            let player_color: Color;
 
+            if self.black {
+                color = Color::Black;
+                player_color = Color::White;
+            }
+            else {
+                color = Color::White;
+                player_color = Color::Black;
+            }
+            
             let block = Block::default()
                         .title(title.alignment(Alignment::Center)
                             .position(Position::Top))
@@ -110,7 +128,7 @@ impl Widget for &App {
                             .alignment(Alignment::Center)
                             .position(Position::Bottom))
                         .borders(Borders::ALL);
-            
+
             let counter_text = Text::from(vec![Line::from(vec![
                 "Score ".into(),
                 self.score.to_string().into(),
@@ -137,6 +155,7 @@ impl Widget for &App {
                 Paragraph::new(pause_text)
                 .centered()
                 .block(block.clone())
+                .style(Style::default().bg(player_color))
                 .render(area, buf);
             }
 
@@ -144,13 +163,14 @@ impl Widget for &App {
                 .block(block)
                 .x_bounds([-90.0, 90.0])
                 .y_bounds([-45.0, 45.0])
+                .background_color(color)
                 .paint(|ctx|{
                     ctx.draw(&canvas::Rectangle {
                         x: -5.0,
                         y: self.y,
                         width: 10.0,
                         height: self.height,
-                        color: Color::White,
+                        color: player_color,
                     });
                     ctx.layer();
                     ctx.draw(&canvas::Line {
@@ -182,6 +202,7 @@ impl App {
     /// runs the application's main loop until the user quits
     pub fn run(&mut self, terminal: &mut tui::Tui) -> Result<()> {
         loop {
+            self.handle_mode()?;
             terminal.draw(|frame| self.render_frame(frame))?;
             let time = self.increase_spead();
             if event::poll(Duration::from_micros(time))? {
@@ -215,6 +236,21 @@ impl App {
         if self.score > self.highscore {
             self.highscore = self.score;
         }
+    }
+
+    fn handle_mode(&mut self) -> Result<()> {
+        if self.score < 2000 || !self.color_switch {
+            return Ok(());
+        }
+        let mut rng = thread_rng();
+        let random_num = rng.gen_range(0.0..1.0);
+        if self.black && (self.score % 1000 == 0) && random_num < 0.3{
+            self.black = false;
+        }
+        else if self.score % 500 == 0 && random_num < 0.7{
+            self.black = true;
+        }
+        Ok(())
     }
 
     fn increase_spead(&self) -> u64 {
@@ -350,6 +386,8 @@ impl App {
             on_puase: false,
             dead: false,
             auto: false,
+            black: true,
+            color_switch: true,
         }
     }
 
@@ -362,13 +400,29 @@ impl App {
             KeyCode::Esc => self.pause()?,
             KeyCode::Enter => self.restart()?,
             KeyCode::Tab => self.auto()?,
+            KeyCode::Char('c') => self.disable_color_switch()?,
             _ => {}
         }
         Ok(())
     }
 
     fn auto(&mut self) -> Result<()> {
-        self.auto = true;
+        if self.auto {
+            self.auto = false;
+        }
+        else {
+            self.auto = true;
+        }
+        Ok(())
+    }
+
+    fn disable_color_switch(&mut self) -> Result<()> {
+        if self.color_switch {
+            self.color_switch = false;
+        }
+        else {
+            self.color_switch = true;
+        }
         Ok(())
     }
 
@@ -391,6 +445,7 @@ impl App {
             self.score = 0;
             self.highscore = num;
             self.auto = false;
+            self.black = true;
         }
 
         Ok(())
@@ -476,6 +531,7 @@ fn autorun(app: &mut App) -> Result<()> {
 
 
 /*
+//TODO: refactor app class and extract player and enemies into seperate classes
 #[derive(Debug, Default)]
 pub struct Player {
     x: u8,
