@@ -17,7 +17,6 @@ use ratatui::{
     style::Color,
 };
 
-use std::fs::File;
 use std::path::Path;
 
 use std::time::Duration;
@@ -40,6 +39,7 @@ pub struct App {
     speedy: bool,
     on_puase: bool,
     dead: bool,
+    auto: bool,
 }
 
 impl Widget for &App {
@@ -99,6 +99,8 @@ impl Widget for &App {
                 "<Esc> ".bold(),
                 " Quit ".into(),
                 "<Q> ".bold(),
+                " Auto ".into(),
+                " Tab ".bold(),
             ]));
 
             let block = Block::default()
@@ -128,6 +130,15 @@ impl Widget for &App {
             .block(block.clone())
             .left_aligned()
             .render(area, buf);
+                
+            if self.on_puase {
+                let pause_text = Text::from("Paused");
+
+                Paragraph::new(pause_text)
+                .centered()
+                .block(block.clone())
+                .render(area, buf);
+            }
 
             let player = Canvas::default()
                 .block(block)
@@ -181,6 +192,9 @@ impl App {
             }
             if self.on_puase || self.dead {
                 continue;
+            }
+            if self.auto {
+                autorun(self)?;
             }
             self.update_position()?;
             self.update_enemies()?;
@@ -249,7 +263,7 @@ impl App {
         if self.in_air {
             if self.rising {
                 if self.y < 15.0 {
-                    self.y += 1.5;
+                    self.y += 1.25;
                 }
                 else {
                     self.rising = false;
@@ -257,7 +271,7 @@ impl App {
             }
             else {
                 if self.y > -20.0 {
-                    self.y -= 1.5;
+                    self.y -= 1.25;
                 }
                 else {
                     self.in_air = false;
@@ -278,7 +292,7 @@ impl App {
         let mut last_in_range: bool = false;
         if self.enemies.len() > 0 {
             let last_one = self.enemies[self.enemies.len() - 1][0];
-            if last_one < 55.0 || last_one > 84.0 {
+            if last_one < 50.0 || last_one > 84.0 {
                 last_in_range = true;
             }
         }
@@ -329,6 +343,7 @@ impl App {
             speedy: false,
             on_puase: false,
             dead: false,
+            auto: false,
         }
     }
 
@@ -340,8 +355,14 @@ impl App {
             KeyCode::Right => self.speed()?,
             KeyCode::Esc => self.pause()?,
             KeyCode::Enter => self.restart()?,
+            KeyCode::Tab => self.auto()?,
             _ => {}
         }
+        Ok(())
+    }
+
+    fn auto(&mut self) -> Result<()> {
+        self.auto = true;
         Ok(())
     }
 
@@ -363,6 +384,7 @@ impl App {
             self.height = 10.0;
             self.score = 0;
             self.highscore = num;
+            self.auto = false;
         }
 
         Ok(())
@@ -417,6 +439,33 @@ impl App {
         Ok(())
     }
 
+}
+
+fn autorun(app: &mut App) -> Result<()> {
+    let mut enemies_in_front = vec![];
+
+    if app.enemies.len() > 0 {
+        for enemy in app.enemies.iter() {
+            if enemy[0] > 5.0 {
+                enemies_in_front.push(enemy);
+            }
+        }
+        
+        if enemies_in_front.len() > 0 {
+            let closest_enemy: &Vec<f64> = enemies_in_front[0];
+
+            if !(closest_enemy[0] > 30.0)  {
+                if closest_enemy[2] > -20.0 && !app.ducking {
+                    app.duck()?;
+                }
+                else if closest_enemy[2] == -20.0 {
+                    app.jump()?;
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 
