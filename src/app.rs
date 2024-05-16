@@ -33,6 +33,7 @@ pub struct App {
     height: f64,
     enemies: Vec<Vec<f64>>,
     speedy: bool,
+    on_puase: bool,
 }
 
 impl Widget for &App {
@@ -47,6 +48,8 @@ impl Widget for &App {
             "<Right> ".bold(),
             " Duck ".into(),
             "<Down> ".bold(),
+            " Pause ".into(),
+            "<Esc> ".bold(),
             " Quit ".into(),
             "<Q> ".bold(),
         ]));
@@ -127,12 +130,15 @@ impl App {
             if event::poll(Duration::from_micros(time))? {
                 self.handle_events().wrap_err("handle events failed")?;
             }
+            if self.exit {
+                break;
+            }
+            if self.on_puase {
+                continue;
+            }
             self.update_position()?;
             self.update_enemies()?;
             if self.collision_check() {
-                break;
-            }
-            if self.exit {
                 break;
             }
             self.score += 1;
@@ -237,11 +243,11 @@ impl App {
             let mut height = rng.gen_range(5.0..8.0);
             let flying = rng.gen_range(0.0..1.0);
             let mut y = -20.0;
-            if flying > 0.5 && flying < 0.75 {
+            if flying > 0.75 && flying < 0.82 {
                 y = rng.gen_range(-12.0..-8.0);
                 height = 1.0;
             }
-            else if flying > 0.75 {
+            else if flying > 0.82 {
                 y = rng.gen_range(0.0..5.0);
                 height = 1.0;
             }
@@ -275,6 +281,7 @@ impl App {
             height: 10.0,
             enemies: vec![],
             speedy: false,
+            on_puase: false,
         }
     }
 
@@ -284,6 +291,7 @@ impl App {
             KeyCode::Down => self.duck()?,
             KeyCode::Up => self.jump()?,
             KeyCode::Right => self.speed()?,
+            KeyCode::Esc => self.pause()?,
             _ => {}
         }
         Ok(())
@@ -324,6 +332,16 @@ impl App {
         }
         if self.in_air {
             self.rising = false;
+        }
+        Ok(())
+    }
+
+    fn pause(&mut self) -> Result<()> {
+        if self.on_puase {
+            self.on_puase = false;
+        }
+        else {
+            self.on_puase = true;
         }
         Ok(())
     }
