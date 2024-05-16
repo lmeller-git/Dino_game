@@ -17,9 +17,14 @@ use ratatui::{
     style::Color,
 };
 
+use std::fs::File;
+use std::path::Path;
+
 use std::time::Duration;
 
 use rand::prelude::*;
+
+use crate::read_write::*;
 
 #[derive(Debug, Default)]
 pub struct App {
@@ -34,90 +39,131 @@ pub struct App {
     enemies: Vec<Vec<f64>>,
     speedy: bool,
     on_puase: bool,
+    dead: bool,
 }
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer)
         where
             Self: Sized {
-        let title = Title::from(" Dinosaur Game ".bold());
-        let instructions = Title::from(Line::from(vec![
-            " Jump ".into(),
-            "<Up> ".bold(),
-            " Speed ".into(),
-            "<Right> ".bold(),
-            " Duck ".into(),
-            "<Down> ".bold(),
-            " Pause ".into(),
-            "<Esc> ".bold(),
-            " Quit ".into(),
-            "<Q> ".bold(),
-        ]));
 
-        let block = Block::default()
+        if self.dead {
+            let title = Title::from(" Dinosaur Game ".bold());
+            let instructions = Title::from(Line::from(vec![
+                " Restart ".into(),
+                "<Enter> ".bold(),
+                " Quit ".into(),
+                "<Q> ".bold(),
+            ]));
+            
+            let block = Block::default()
                     .title(title.alignment(Alignment::Center)
                         .position(Position::Top))
                     .title(instructions
                         .alignment(Alignment::Center)
                         .position(Position::Bottom))
                     .borders(Borders::ALL);
-        
-        let counter_text = Text::from(vec![Line::from(vec![
-            "Score ".into(),
-            self.score.to_string().into(),
-        ])]);
-
-        let best_counter_text = Text::from(vec![Line::from(vec![
-            "Highscore ".into(),
-            self.highscore.to_string().into(),
-        ])]);
-
-        Paragraph::new(counter_text)
-        .block(block.clone())
-        .right_aligned()
-        .render(area, buf);
-
-        Paragraph::new(best_counter_text)
-        .block(block.clone())
-        .left_aligned()
-        .render(area, buf);
-
-        let player = Canvas::default()
-            .block(block)
-            .x_bounds([-90.0, 90.0])
-            .y_bounds([-45.0, 45.0])
-            .paint(|ctx|{
-                ctx.draw(&canvas::Rectangle {
-                    x: -5.0,
-                    y: self.y,
-                    width: 10.0,
-                    height: self.height,
-                    color: Color::White,
-                });
-                ctx.layer();
-                ctx.draw(&canvas::Line {
-                    x1: -90.0,
-                    y1: -20.0,
-                    x2: 90.0,
-                    y2: -20.0,
-                    color: Color::Green,
-                });
-                ctx.layer();
-                if self.enemies.len() > 0 {
-                    for enemy in self.enemies.iter(){
-                        ctx.draw(&canvas::Rectangle {
-                            x: enemy[0],
-                            y: enemy[2],
-                            width: 2.0,
-                            height: enemy[1],
-                            color: Color::Red,
-                        })
-                    }
-                }
-            });
-        player.render(area, buf); 
-
             
+            let best_counter_text = Text::from(vec![Line::from(vec![
+                "Highscore ".into(),
+                self.highscore.to_string().into(),
+            ])]);
+
+            Paragraph::new(best_counter_text)
+            .block(block.clone())
+            .left_aligned()
+            .render(area, buf);
+            
+            let info_text = Text::from(vec![Line::from(vec![
+                "You died with score ".into(),
+                self.score.to_string().into(),
+            ])]);
+
+            Paragraph::new(info_text)
+            .block(block)
+            .centered()
+            .bold()
+            .red()
+            .render(area, buf);
+        }        
+        else {
+            let title = Title::from(" Dinosaur Game ".bold());
+            let instructions = Title::from(Line::from(vec![
+                " Jump ".into(),
+                "<Up> ".bold(),
+                " Speed ".into(),
+                "<Right> ".bold(),
+                " Duck ".into(),
+                "<Down> ".bold(),
+                " Pause ".into(),
+                "<Esc> ".bold(),
+                " Quit ".into(),
+                "<Q> ".bold(),
+            ]));
+
+            let block = Block::default()
+                        .title(title.alignment(Alignment::Center)
+                            .position(Position::Top))
+                        .title(instructions
+                            .alignment(Alignment::Center)
+                            .position(Position::Bottom))
+                        .borders(Borders::ALL);
+            
+            let counter_text = Text::from(vec![Line::from(vec![
+                "Score ".into(),
+                self.score.to_string().into(),
+            ])]);
+
+            let best_counter_text = Text::from(vec![Line::from(vec![
+                "Highscore ".into(),
+                self.highscore.to_string().into(),
+            ])]);
+
+            Paragraph::new(counter_text)
+            .block(block.clone())
+            .right_aligned()
+            .render(area, buf);
+
+            Paragraph::new(best_counter_text)
+            .block(block.clone())
+            .left_aligned()
+            .render(area, buf);
+
+            let player = Canvas::default()
+                .block(block)
+                .x_bounds([-90.0, 90.0])
+                .y_bounds([-45.0, 45.0])
+                .paint(|ctx|{
+                    ctx.draw(&canvas::Rectangle {
+                        x: -5.0,
+                        y: self.y,
+                        width: 10.0,
+                        height: self.height,
+                        color: Color::White,
+                    });
+                    ctx.layer();
+                    ctx.draw(&canvas::Line {
+                        x1: -90.0,
+                        y1: -20.0,
+                        x2: 90.0,
+                        y2: -20.0,
+                        color: Color::Green,
+                    });
+                    ctx.layer();
+                    if self.enemies.len() > 0 {
+                        for enemy in self.enemies.iter(){
+                            ctx.draw(&canvas::Rectangle {
+                                x: enemy[0],
+                                y: enemy[2],
+                                width: 2.0,
+                                height: enemy[1],
+                                color: Color::Red,
+                            })
+                        }
+                    }
+                });
+            player.render(area, buf);  
+        }   
     }   
 }
 
@@ -133,13 +179,13 @@ impl App {
             if self.exit {
                 break;
             }
-            if self.on_puase {
+            if self.on_puase || self.dead {
                 continue;
             }
             self.update_position()?;
             self.update_enemies()?;
             if self.collision_check() {
-                break;
+                self.dead = true;
             }
             self.score += 1;
             self.highscore();
@@ -282,6 +328,7 @@ impl App {
             enemies: vec![],
             speedy: false,
             on_puase: false,
+            dead: false,
         }
     }
 
@@ -292,8 +339,32 @@ impl App {
             KeyCode::Up => self.jump()?,
             KeyCode::Right => self.speed()?,
             KeyCode::Esc => self.pause()?,
+            KeyCode::Enter => self.restart()?,
             _ => {}
         }
+        Ok(())
+    }
+
+    fn restart(&mut self) -> Result<()> {
+
+        if self.dead {
+            let path = Path::new("Highscore.bin");
+            save(path, self.highscore)?;
+            
+            let num = read(path)?;
+
+            self.dead = false;
+            self.on_puase = false;
+            self.ducking = false;
+            self.in_air = false;
+            self.y = -20.0;
+            self.speedy = false;
+            self.enemies = vec![];
+            self.height = 10.0;
+            self.score = 0;
+            self.highscore = num;
+        }
+
         Ok(())
     }
 
