@@ -32,6 +32,7 @@ pub struct App {
     ducking: bool,
     height: f64,
     enemies: Vec<Vec<f64>>,
+    speedy: bool,
 }
 
 impl Widget for &App {
@@ -42,10 +43,12 @@ impl Widget for &App {
         let instructions = Title::from(Line::from(vec![
             " Jump ".into(),
             "<Up> ".bold(),
+            " Speed ".into(),
+            "<Right> ".bold(),
+            " Duck ".into(),
+            "<Down> ".bold(),
             " Quit ".into(),
             "<Q> ".bold(),
-            " Duck ".into(),
-            "<Down> ".bold()
         ]));
 
         let block = Block::default()
@@ -149,11 +152,21 @@ impl App {
     }
 
     fn increase_spead(&self) -> u64 {
-        if (self.score / 10000).to_u64().unwrap() >= 5000 {
-            return 1;
+        if !self.speedy {
+            if (self.score / 10000).to_u64().unwrap() >= 5000 {
+                return 1;
+            }
+            else {
+                return 5000 - (self.score / 10000).to_u64().unwrap();
+            }
         }
         else {
-            return 5000 - (self.score / 10000).to_u64().unwrap();
+            if (self.score / 10000).to_u64().unwrap() >= 5000 {
+                return 1;
+            }
+            else {
+                return (5000 - (self.score / 10000).to_u64().unwrap()) / 2;
+            }
         }
     }
 
@@ -171,7 +184,7 @@ impl App {
     fn collision_check(&mut self) -> bool {
         for enemy in self.enemies.iter() {
             if enemy[0] < 5.0 && enemy[0] > -5.0 {
-                if (self.y >= enemy[2] && self.y <= enemy[2] + enemy[1]) || (self.y + self.height >= enemy[2] && self.y + self.height <= enemy[2] + enemy[1]){
+                if (self.y >= enemy[2] && self.y <= enemy[2] + enemy[1]) || (self.y + self.height >= (enemy[2] - enemy[1] ) && (self.y + self.height <= enemy[2] + enemy[1])){
                     return true;
                 }
             }
@@ -225,11 +238,11 @@ impl App {
             let flying = rng.gen_range(0.0..1.0);
             let mut y = -20.0;
             if flying > 0.5 && flying < 0.75 {
-                y = -10.0;
+                y = rng.gen_range(-12.0..-8.0);
                 height = 1.0;
             }
             else if flying > 0.75 {
-                y = 0.0;
+                y = rng.gen_range(0.0..5.0);
                 height = 1.0;
             }
             self.enemies.push(vec![88.0, height, y]);
@@ -260,7 +273,8 @@ impl App {
             rising: false,
             ducking: false,
             height: 10.0,
-            enemies: vec![]
+            enemies: vec![],
+            speedy: false,
         }
     }
 
@@ -269,6 +283,7 @@ impl App {
             KeyCode::Char('q') => self.exit(),
             KeyCode::Down => self.duck()?,
             KeyCode::Up => self.jump()?,
+            KeyCode::Right => self.speed()?,
             _ => {}
         }
         Ok(())
@@ -276,6 +291,16 @@ impl App {
 
     fn exit(&mut self) {
         self.exit = true;
+    }
+
+    fn speed(&mut self) -> Result<()> {
+        if self.speedy {
+            self.speedy = false;
+        }
+        else {
+            self.speedy = true;
+        }
+        Ok(())
     }
 
     fn jump(&mut self) -> Result<()> {
