@@ -1,7 +1,5 @@
 use crate::tui;
 
-
-
 use color_eyre::owo_colors::OwoColorize;
 use color_eyre::{
     eyre::WrapErr,
@@ -255,19 +253,19 @@ impl App {
 
     fn increase_spead(&self) -> u64 {
         if !self.speedy {
-            if (self.score / 10000).to_u64().unwrap() >= 5000 {
+            if (self.score / 100).to_u64().unwrap() >= 5000 {
                 return 1;
             }
             else {
-                return 5000 - (self.score / 10000).to_u64().unwrap();
+                return 5000 - (self.score / 100).to_u64().unwrap();
             }
         }
         else {
-            if (self.score / 10000).to_u64().unwrap() >= 5000 {
+            if (self.score / 100).to_u64().unwrap() >= 5000 {
                 return 1;
             }
             else {
-                return (5000 - (self.score / 10000).to_u64().unwrap()) / 1000;
+                return (5000 - (self.score / 100).to_u64().unwrap()) / 1000;
             }
         }
     }
@@ -330,7 +328,7 @@ impl App {
         let mut last_one = 0.0;
         if self.enemies.len() > 0 {
             last_one = self.enemies[self.enemies.len() - 1][0];
-            if last_one < 50.0 || last_one > 84.0 {
+            if last_one < 50.0 {
                 last_in_range = true;
                 if self.enemies[self.enemies.len() - 1][2] > -20.0 {
                     last_is_flying = true;
@@ -341,15 +339,15 @@ impl App {
             last_in_range = true;
         }
         
-        if rng.gen_range(0.0..1.0) < 0.008 && last_in_range {
+        if rng.gen_range(0.0..1.0) < 0.015 && last_in_range {
             let mut height = rng.gen_range(5.0..8.0);
             let flying = rng.gen_range(0.0..1.0);
             let mut y = -20.0;
-            if (flying > 0.75 && flying < 0.82) && !(last_one > 84.0 && !last_is_flying){
+            if flying > 0.75 && flying < 0.82 {
                 y = rng.gen_range(-12.0..-8.0);
                 height = 1.0;
             }
-            else if flying > 0.82 && !(last_one > 84.0 && !last_is_flying){
+            else if flying > 0.82 {
                 y = rng.gen_range(0.0..5.0);
                 height = 1.0;
             }
@@ -515,7 +513,7 @@ fn autorun(app: &mut App) -> Result<()> {
         if enemies_in_front.len() > 0 {
             let closest_enemy: &Vec<f64> = enemies_in_front[0];
 
-            if !(closest_enemy[0] > 40.0)  {
+            if !(closest_enemy[0] > 45.0)  {
                 if closest_enemy[2] > -20.0 && !app.ducking {
                     app.duck()?;
                 }
