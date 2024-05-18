@@ -1,6 +1,5 @@
 use crate::tui;
 
-use color_eyre::owo_colors::OwoColorize;
 use color_eyre::{
     eyre::WrapErr,
     Result,
@@ -125,7 +124,8 @@ impl Widget for &App {
                         .title(instructions
                             .alignment(Alignment::Center)
                             .position(Position::Bottom))
-                        .borders(Borders::ALL);
+                        .borders(Borders::ALL)
+                        .style(Style::default().bg(color).fg(player_color));
 
             let counter_text = Text::from(vec![Line::from(vec![
                 "Score ".into(),
@@ -147,13 +147,21 @@ impl Widget for &App {
             .left_aligned()
             .render(area, buf);
                 
+            if self.auto {
+                let pause_text = Text::from("Auto");
+
+                Paragraph::new(pause_text)
+                .centered()
+                .block(block.clone())
+                .render(area, buf);
+            }
+                
             if self.on_puase {
                 let pause_text = Text::from("Paused");
 
                 Paragraph::new(pause_text)
                 .centered()
                 .block(block.clone())
-                .style(Style::default().bg(player_color))
                 .render(area, buf);
             }
 
@@ -324,15 +332,9 @@ impl App {
     fn update_enemies(&mut self) -> Result<()> {
         let mut rng = thread_rng();
         let mut last_in_range: bool = false;
-        let mut last_is_flying: bool = false;
-        let mut last_one = 0.0;
         if self.enemies.len() > 0 {
-            last_one = self.enemies[self.enemies.len() - 1][0];
-            if last_one < 50.0 {
+            if self.enemies[self.enemies.len() - 1][0] < 50.0 {
                 last_in_range = true;
-                if self.enemies[self.enemies.len() - 1][2] > -20.0 {
-                    last_is_flying = true;
-                }
             }
         }
         else {
@@ -505,7 +507,7 @@ fn autorun(app: &mut App) -> Result<()> {
 
     if app.enemies.len() > 0 {
         for enemy in app.enemies.iter() {
-            if enemy[0] > 5.0 {
+            if enemy[0] > 0.0 {
                 enemies_in_front.push(enemy);
             }
         }
