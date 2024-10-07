@@ -42,6 +42,8 @@ pub struct App {
     auto: bool,
     black: bool,
     color_switch: bool,
+    current_up: f64,
+    gravity: f64
 }
 
 impl Widget for &App {
@@ -303,23 +305,22 @@ impl App {
 
     fn update_position(&mut self) -> Result<()> {
         if self.in_air {
-            if self.rising {
-                if self.y < 15.0 {
-                    self.y += 1.25;
-                }
-                else {
-                    self.rising = false;
-                }
-            }
-            else {
-                if self.y > -20.0 {
-                    self.y -= 1.25;
-                }
-                else {
+            if self.current_up < 0.0 {
+                if self.y <= -19.0 {
+                    self.y = -20.0;
+                    self.current_up = 1.5;
                     self.in_air = false;
+                    return Ok(());
                 }
             }
+            self.y += self.current_up;
+            self.current_up += self.gravity;
         }
+        else {
+            self.in_air = false;
+            self.current_up = 1.5;
+        }
+       
         if self.ducking {
             self.height = 5.0;
         }
@@ -388,6 +389,8 @@ impl App {
             auto: false,
             black: true,
             color_switch: true,
+            current_up: 1.5,
+            gravity: -0.04,
         }
     }
 
@@ -474,13 +477,10 @@ impl App {
 
     fn jump(&mut self) -> Result<()> {
         if self.in_air {
-            self.in_air;
+            return Ok(());
         }
-        else {
-            self.in_air = true;
-            self.rising = true;
-            self.ducking = false;
-        }
+        self.in_air = true;
+        self.rising = true;
         Ok(())
     }
 
